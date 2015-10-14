@@ -65,100 +65,94 @@ void CommandDispatcher::writeOutputCommands()
     base::LinearAngular6DCommand acceleration_cmd;
     
     // handle linear part
-    for(unsigned i = 0; i < 3; i++)
-    {
-	switch(domain.linear[i])
-	{
-	    case WorldFrame:
-		world_cmd.time = command.time;
-		world_cmd.linear[i] = command.linear[i];
-		break;
-	    case WorldFrameDelta:
-		world_cmd.time = command.time;
-                if(std::abs(command.linear[i]) < 1.0e-4 && !base::isNaN(last_delta_world_command.linear[i]))
-                {
-                    if(new_delta_command[i])
-                    {
-                        last_delta_world_command.linear[i] = pose_sample.position[i];
-                        new_delta_command[i] = false;
-                    }
-                    world_cmd.linear[i] = last_delta_world_command.linear[i];
+    for (unsigned i = 0; i < 3; i++) {
+        switch (domain.linear[i]) {
+        case WorldFrame:
+            world_cmd.time = command.time;
+            world_cmd.linear[i] = command.linear[i];
+            break;
+        case WorldFrameDelta:
+            world_cmd.time = command.time;
+            if (std::abs(command.linear[i]) < 1.0e-4 && !base::isNaN(last_delta_world_command.linear[i])) {
+                if (new_delta_command[i]) {
+                    last_delta_world_command.linear[i] = pose_sample.position[i];
+                    new_delta_command[i] = false;
                 }
-                else
-                {
-                    world_cmd.linear[i] = pose_sample.position[i] + command.linear[i];
-                    last_delta_world_command.linear[i] = world_cmd.linear[i];
-                    new_delta_command[i] = true;
-                }
-		break;
-	    case AlignedPoseFrame:
-		aligned_position_cmd.time = command.time;
-		aligned_position_cmd.linear[i] = command.linear[i];
-		break;
-	    case AlignedVelocity:
-		aligned_velocity_cmd.time = command.time;
-		aligned_velocity_cmd.linear[i] = command.linear[i];
-		break;
-	    case Speed:
-	    case Effort:
-	    case Acceleration:
-	    case Raw:
-		acceleration_cmd.time = command.time;
-		acceleration_cmd.linear[i] = command.linear[i];
-		break;
-	}
+                world_cmd.linear[i] = last_delta_world_command.linear[i];
+            } else {
+                world_cmd.linear[i] = pose_sample.position[i] + command.linear[i];
+                last_delta_world_command.linear[i] = world_cmd.linear[i];
+                new_delta_command[i] = true;
+            }
+            break;
+        case AlignedPoseFrame:
+            aligned_position_cmd.time = command.time;
+            aligned_position_cmd.linear[i] = command.linear[i];
+            break;
+        case AlignedVelocity:
+            aligned_velocity_cmd.time = command.time;
+            aligned_velocity_cmd.linear[i] = command.linear[i];
+            break;
+        case Speed:
+        case Effort:
+        case Acceleration:
+        case Raw:
+            acceleration_cmd.time = command.time;
+            acceleration_cmd.linear[i] = command.linear[i];
+            break;
+        case Nan:
+            acceleration_cmd.time = command.time;
+            acceleration_cmd.linear[i] = base::unset<double>();
+            break;
+        }
     }
     
     // handle angular part
-    for(unsigned i = 0; i < 3; i++)
-    {
-	switch(domain.angular[i])
-	{
-	    case WorldFrame:
-		world_cmd.time = command.time;
-		world_cmd.angular[i] = command.angular[i];
-		break;
-	    case WorldFrameDelta:
-	    {
-		world_cmd.time = command.time;
-                if(std::abs(command.angular[i]) < 1.0e-4 && !base::isNaN(last_delta_world_command.angular[i]))
-                {
-                    if(new_delta_command[3+i])
-                    {
-                        last_delta_world_command.linear[i] = pose_sample.position[i];
-                        base::Vector3d euler = base::getEuler(pose_sample.orientation);
-                        last_delta_world_command.angular[i] = euler[2-i];
-                        new_delta_command[3+i] = false;
-                    }
-                    world_cmd.angular[i] = last_delta_world_command.angular[i];
+    for (unsigned i = 0; i < 3; i++) {
+        switch (domain.angular[i]) {
+        case WorldFrame:
+            world_cmd.time = command.time;
+            world_cmd.angular[i] = command.angular[i];
+            break;
+        case WorldFrameDelta: {
+            world_cmd.time = command.time;
+            if (std::abs(command.angular[i]) < 1.0e-4 && !base::isNaN(last_delta_world_command.angular[i])) {
+                if (new_delta_command[3 + i]) {
+                    last_delta_world_command.linear[i] = pose_sample.position[i];
+                    base::Vector3d euler = base::getEuler(pose_sample.orientation);
+                    last_delta_world_command.angular[i] = euler[2 - i];
+                    new_delta_command[3 + i] = false;
                 }
-                else
-                {
-                    base::Orientation target_orientation = pose_sample.orientation * 
-                                                            Eigen::AngleAxisd(command.angular[i], Eigen::Vector3d::Unit(i));
-                    base::Vector3d euler = base::getEuler(target_orientation);
-                    world_cmd.angular[i] = euler[2-i];
-                    last_delta_world_command.angular[i] = world_cmd.angular[i];
-                    new_delta_command[3+i] = true;
-                }
-		break;
-	    }
-	    case AlignedPoseFrame:
-		aligned_position_cmd.time = command.time;
-		aligned_position_cmd.angular[i] = command.angular[i];
-		break;
-	    case AlignedVelocity:
-		aligned_velocity_cmd.time = command.time;
-		aligned_velocity_cmd.angular[i] = command.angular[i];
-		break;
-	    case Speed:
-	    case Effort:
-	    case Acceleration:
-	    case Raw:
-		acceleration_cmd.time = command.time;
-		acceleration_cmd.angular[i] = command.angular[i];
-		break;
-	}
+                world_cmd.angular[i] = last_delta_world_command.angular[i];
+            } else {
+                base::Orientation target_orientation = pose_sample.orientation * Eigen::AngleAxisd(command.angular[i], Eigen::Vector3d::Unit(i));
+                base::Vector3d euler = base::getEuler(target_orientation);
+                world_cmd.angular[i] = euler[2 - i];
+                last_delta_world_command.angular[i] = world_cmd.angular[i];
+                new_delta_command[3 + i] = true;
+            }
+            break;
+        }
+        case AlignedPoseFrame:
+            aligned_position_cmd.time = command.time;
+            aligned_position_cmd.angular[i] = command.angular[i];
+            break;
+        case AlignedVelocity:
+            aligned_velocity_cmd.time = command.time;
+            aligned_velocity_cmd.angular[i] = command.angular[i];
+            break;
+        case Speed:
+        case Effort:
+        case Acceleration:
+        case Raw:
+            acceleration_cmd.time = command.time;
+            acceleration_cmd.angular[i] = command.angular[i];
+            break;
+        case Nan:
+            acceleration_cmd.time = command.time;
+            acceleration_cmd.angular[i] = base::unset<double>();
+            break;
+        }
     }
     
     // write commands to ports
