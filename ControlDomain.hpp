@@ -18,7 +18,7 @@ enum ControlDomain
     Effort, //Torque in N or m of the actuators
     Acceleration, // Acceleration in rad/s^2 or m/s^2 of the actuators
     Raw, // Raw value of the actuators
-    Nan //Not a Number
+    Unset //Not a Number
 };
 
 struct LinearAngular6DDomain
