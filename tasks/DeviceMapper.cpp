@@ -147,30 +147,29 @@ void DeviceMapper::updateHook()
                     Eigen::VectorXd cmd_in_v = Eigen::Map<Eigen::VectorXd>(cmd_in.data(), cmd_in.size());
                     base::Vector6d cmd_out = config.axis_mapping.block(0, 0, 6, known_fields) * cmd_in_v.block(0, 0, known_fields, 1);
 
-                    if(control_mode == auv_raw_command_converter::ControlChain)
+                    if(control_mode == auv_raw_command_converter::AccelerationOverride)
                     {
                         // apply coefficient wise scaling
-                        cmd_out.array() = cmd_out.array() * scaling.array();
+                        base::Vector6d cmd_out_scaled = cmd_out.array() * _scalings.value().acceleration_override;
 
                         // write out command
                         base::LinearAngular6DCommand linear_angular_cmd;
                         linear_angular_cmd.time = cmd.time;
-                        linear_angular_cmd.linear = cmd_out.block(0,0,3,1);
-                        linear_angular_cmd.angular = cmd_out.block(3,0,3,1);
-
-                        _linear_angular_command.write(linear_angular_cmd);
-                    }
-                    else if(control_mode == auv_raw_command_converter::AccelerationOverride)
-                    {
-                        // write out command
-                        base::LinearAngular6DCommand linear_angular_cmd;
-                        cmd_out = cmd_out * _scalings.value().acceleration_override;
-                        linear_angular_cmd.time = cmd.time;
-                        linear_angular_cmd.linear = cmd_out.block(0,0,3,1);
-                        linear_angular_cmd.angular = cmd_out.block(3,0,3,1);
-
+                        linear_angular_cmd.linear = cmd_out_scaled.block(0,0,3,1);
+                        linear_angular_cmd.angular = cmd_out_scaled.block(3,0,3,1);
                         _acc_override_command.write(linear_angular_cmd);
                     }
+
+                    // apply coefficient wise scaling
+                    base::Vector6d cmd_out_scaled = cmd_out.array() * scaling.array();
+
+                    // write out command
+                    base::LinearAngular6DCommand linear_angular_cmd;
+                    linear_angular_cmd.time = cmd.time;
+                    linear_angular_cmd.linear = cmd_out_scaled.block(0,0,3,1);
+                    linear_angular_cmd.angular = cmd_out_scaled.block(3,0,3,1);
+
+                    _linear_angular_command.write(linear_angular_cmd);
 
                 }
             }
